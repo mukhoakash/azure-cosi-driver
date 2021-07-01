@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	AccessKey = "GYpkP/vgSAH8vJYD/FrSysQOnTJ2nKsy1PFR2YSRWsoR9FMcc4PNIZXunAgrVpE/2Qbc86MfcDNhyKJqS7sUbA=="
+	AccessKey = ""
 )
 
 var (
