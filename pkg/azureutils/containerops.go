@@ -41,7 +41,7 @@ func CreateContainer(
 	}
 
 	containerURL, err := createContainerUrl(storageAccount, accessKey, containerName)
-	if err ! = nil {
+	if err != nil {
 		return "", err
 	}
 
@@ -65,8 +65,8 @@ func DeleteContainer(
 	matches := storageAccountRE.FindStringSubmatch(containerURL)
 	storageAccount := matches[1]
 	containerName := matches[2]
-	containerUrl, err := createContainerUrl(storageAccount, accessKey, containerName)
-	
+	containerUrl, err := createContainerUrl(storageAccount, storageAccount, containerName)
+
 	if err != nil {
 		return err
 	}

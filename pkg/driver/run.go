@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
-	spec "sigs.k8s.io/container-object-storafge-interface-spec"
+	spec "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
 const (
@@ -83,8 +83,8 @@ func StartServers(
 		return nil, err
 	}
 
-	grpcSever := newCOSIServer(proto, addr, identityServer, provServer)
-	if err := grpcServer.start(); err != nil {
+	grpcServer := newCOSIServer(proto, addr, identityServer, provServer)
+	if err := grpcServer.startServer(); err != nil {
 		klog.Errorf("Error starting GRPC server %v", err)
 		return nil, err
 	}

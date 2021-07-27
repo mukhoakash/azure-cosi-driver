@@ -19,12 +19,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc"
 
 	klog "k8s.io/klog/v2"
 
-	spec "sigs.k8s.io/container-object-storafge-interface-spec"
+	spec "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
 type COSIServer struct {

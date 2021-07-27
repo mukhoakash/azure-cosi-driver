@@ -29,7 +29,7 @@ type identity struct {
 // type-check
 var _ spec.IdentityServer = &identity{}
 
-func NewIdentityServer(driverName string) *spec.IdentityServer {
+func NewIdentityServer(driverName string) spec.IdentityServer {
 	return &identity{
 		driverName: driverName,
 	}

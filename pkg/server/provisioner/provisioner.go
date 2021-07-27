@@ -52,7 +52,7 @@ func (pr *provisioner) ProvisionerCreateBucket(
 		return nil, status.Error(codes.InvalidArgument, "Protocol is nil")
 	}
 
-	azureBlob := req.GetAzureBlob()
+	azureBlob := protocol.GetAzureBlob()
 	if azureBlob == nil {
 		return nil, status.Error(codes.InvalidArgument, "Azure blob protocol is missing")
 	}
@@ -76,7 +76,9 @@ func (pr *provisioner) ProvisionerCreateBucket(
 			bucketParams = make(map[string]string)
 		}
 		if reflect.DeepEqual(bucketParams, parameters) {
-			return currBucket.bucketId, nil
+			return &spec.ProvisionerCreateBucketResponse{
+				BucketId: currBucket.bucketId,
+			}, nil
 		}
 
 		return nil, status.Error(codes.AlreadyExists, fmt.Sprintf("Bucket %s exists with different parameters", bucketName))

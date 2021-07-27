@@ -32,7 +32,7 @@ func main() {
 	provServer := provisionerserver.NewProvisionerServer()
 	identityServer := identityserver.NewIdentityServer(driver.DriverName)
 
-	err := driver.Run(*endpoint, identityServer, provServer)
+	err := driver.RunServerWithSignalHandler(*endpoint, identityServer, provServer)
 	if err != nil {
 		klog.Exitf("Error when running driver: %v", err)
 	}
