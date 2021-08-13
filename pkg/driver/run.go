@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	DefaultEndpoint = "unix::///var/lib/cosi/cosi.sock"
+	DefaultEndpoint = "unix:///var/lib/cosi/cosi.sock"
 	DriverName      = "blob.cosi.azure.com"
 	waitTime        = 5
 )

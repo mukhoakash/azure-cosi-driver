@@ -27,7 +27,7 @@ import (
 )
 
 type COSIServer struct {
-	waitGroup       *sync.WaitGroup
+	waitGroup       sync.WaitGroup
 	endpointProto   string
 	endpointAddress string
 	server          *grpc.Server
