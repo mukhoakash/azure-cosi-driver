@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	storageAccountRE = regexp.MustCompile(`https://(.+).blob.core.windows.net/(.*)/(?:.*)`)
+	storageAccountRE = regexp.MustCompile(`https://(.+).blob.core.windows.net/([^/]*)/?(?:.*)`)
 )
 
 func CreateContainer(
@@ -61,11 +61,12 @@ func CreateContainer(
 
 func DeleteContainer(
 	ctx context.Context,
-	containerURL string) error {
+	containerURL string,
+	accessKey string) error {
 	matches := storageAccountRE.FindStringSubmatch(containerURL)
 	storageAccount := matches[1]
 	containerName := matches[2]
-	containerUrl, err := createContainerUrl(storageAccount, storageAccount, containerName)
+	containerUrl, err := createContainerUrl(storageAccount, accessKey, containerName)
 
 	if err != nil {
 		return err
@@ -88,14 +89,16 @@ func createContainerUrl(
 	// Create a default request pipeline using credential
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 
-	blobServiceURL, err := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", storageAccount, containerName))
+	urlString, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", storageAccount))
 	if err != nil {
-		return azblob.ContainerURL{}, fmt.Errorf("Unable to parse service url for blob storage")
+		return azblob.ContainerURL{}, err
 	}
 
+	serviceURL := azblob.NewServiceURL(*urlString, pipeline)
+
 	// Create containerURL that wraps the service url and pipeline to make requests
-	containerURL := azblob.NewContainerURL(*blobServiceURL, pipeline)
+	containerURL := serviceURL.NewContainerURL(containerName)
+
 	return containerURL, nil
 
 }

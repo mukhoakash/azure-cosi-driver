@@ -22,6 +22,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog"
 	spec "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
@@ -34,14 +35,19 @@ type bucket struct {
 type provisioner struct {
 	spec.UnimplementedProvisionerServer
 
-	bucketsLock     sync.RWMutex
-	nameToBucketMap map[string]*bucket
+	bucketsLock       sync.RWMutex
+	nameToBucketMap   map[string]*bucket
+	bucketIdToNameMap map[string]string
 }
 
 var _ spec.ProvisionerServer = &provisioner{}
 
 func NewProvisionerServer() spec.ProvisionerServer {
-	return &provisioner{}
+	return &provisioner{
+		nameToBucketMap:   make(map[string]*bucket),
+		bucketsLock:       sync.RWMutex{},
+		bucketIdToNameMap: make(map[string]string),
+	}
 }
 
 func (pr *provisioner) ProvisionerCreateBucket(
@@ -93,10 +99,12 @@ func (pr *provisioner) ProvisionerCreateBucket(
 	pr.bucketsLock.RLock()
 	pr.nameToBucketMap[bucketName] = &bucket{
 		bucketId:   bucketId,
-		bucketName: bucketName,
 		parameters: parameters,
 	}
+	pr.bucketIdToNameMap[bucketId] = bucketName
 	pr.bucketsLock.RUnlock()
+
+	klog.Infof("ProvisionerCreateBucket :: Bucket id :: %s", bucketId)
 
 	return &spec.ProvisionerCreateBucketResponse{
 		BucketId: bucketId,
@@ -107,13 +115,20 @@ func (pr *provisioner) ProvisionerDeleteBucket(
 	ctx context.Context,
 	req *spec.ProvisionerDeleteBucketRequest) (*spec.ProvisionerDeleteBucketResponse, error) {
 	bucketId := req.GetBucketId()
-	err := azureutils.DeleteContainer(ctx, bucketId)
+	klog.Infof("ProvisionerDeleteBucket :: Bucket id :: %s", bucketId)
+	err := azureutils.DeleteContainer(ctx, bucketId, azureutils.AccessKey)
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Remove from the namesToBucketMap
+	if bucketName, ok := pr.bucketIdToNameMap[bucketId]; ok {
+		// Remove from the namesToBucketMap
+		pr.bucketsLock.RLock()
+		delete(pr.nameToBucketMap, bucketName)
+		delete(pr.bucketIdToNameMap, bucketId)
+		pr.bucketsLock.RUnlock()
+	}
 
 	return &spec.ProvisionerDeleteBucketResponse{}, nil
 }
