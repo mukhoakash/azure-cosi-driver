@@ -22,17 +22,31 @@ import (
 	"k8s.io/klog"
 )
 
-func main() {
-	klog.InitFlags(nil)
-	endpoint := flag.String("endpoint", driver.DefaultEndpoint, "endpoint for the GRPC server")
-	flag.Parse()
+var (
+	endpoint                   = flag.String("endpoint", driver.DefaultEndpoint, "endpoint for the GRPC server")
+	kubeconfig                 = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	cloudConfigSecretName      = flag.String("cloud-config-secret-name", "azure-cloud-provider", "cloud config secret name")
+	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "cloud config secret namespace")
+)
 
+func init() {
+	klog.InitFlags(nil)
+}
+
+func main() {
+	flag.Parse()
 	defer klog.Flush()
 
-	provServer := provisionerserver.NewProvisionerServer()
-	identityServer := identityserver.NewIdentityServer(driver.DriverName)
+	provServer, err := provisionerserver.NewProvisionerServer(*kubeconfig, *cloudConfigSecretName, *cloudConfigSecretNamespace)
+	if err != nil {
+		klog.Exitf("Error creating ProvisionerServer: %v", err)
+	}
+	identityServer, err := identityserver.NewIdentityServer(driver.DriverName)
+	if err != nil {
+		klog.Exitf("Error creating IdentityServer: %v", err)
+	}
 
-	err := driver.RunServerWithSignalHandler(*endpoint, identityServer, provServer)
+	err = driver.RunServerWithSignalHandler(*endpoint, identityServer, provServer)
 	if err != nil {
 		klog.Exitf("Error when running driver: %v", err)
 	}
