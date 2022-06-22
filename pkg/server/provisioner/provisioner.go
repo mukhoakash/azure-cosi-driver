@@ -23,12 +23,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
+	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	spec "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
-type bucket struct {
+type bucketDetails struct {
 	bucketId   string
-	bucketName string
 	parameters map[string]string
 }
 
@@ -36,18 +36,34 @@ type provisioner struct {
 	spec.UnimplementedProvisionerServer
 
 	bucketsLock       sync.RWMutex
-	nameToBucketMap   map[string]*bucket
+	nameToBucketMap   map[string]*bucketDetails
 	bucketIdToNameMap map[string]string
+	cloud             *azure.Cloud
 }
 
 var _ spec.ProvisionerServer = &provisioner{}
 
-func NewProvisionerServer() spec.ProvisionerServer {
+func NewProvisionerServer(
+	kubeconfig,
+	cloudConfigSecretName,
+	cloudConfigSecretNamespace string) (spec.ProvisionerServer, error) {
+	kubeClient, err := azureutils.GetKubeClient(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	klog.Infof("Kubeclient : %+v", kubeClient)
+
+	azCloud, err := azureutils.GetAzureCloudProvider(kubeClient, cloudConfigSecretName, cloudConfigSecretNamespace)
+	if err != nil {
+		return nil, err
+	}
+
 	return &provisioner{
-		nameToBucketMap:   make(map[string]*bucket),
+		nameToBucketMap:   make(map[string]*bucketDetails),
 		bucketsLock:       sync.RWMutex{},
 		bucketIdToNameMap: make(map[string]string),
-	}
+		cloud:             azCloud,
+	}, nil
 }
 
 func (pr *provisioner) ProvisionerCreateBucket(
@@ -63,10 +79,8 @@ func (pr *provisioner) ProvisionerCreateBucket(
 		return nil, status.Error(codes.InvalidArgument, "Azure blob protocol is missing")
 	}
 
-	storageAccountName := azureBlob.StorageAccount
 	bucketName := req.GetName()
 	parameters := req.GetParameters()
-
 	if parameters == nil {
 		parameters = make(map[string]string)
 	}
@@ -90,14 +104,16 @@ func (pr *provisioner) ProvisionerCreateBucket(
 		return nil, status.Error(codes.AlreadyExists, fmt.Sprintf("Bucket %s exists with different parameters", bucketName))
 	}
 
-	bucketId, err := azureutils.CreateContainer(ctx, storageAccountName, azureutils.AccessKey, bucketName, parameters)
+	storageAccountName := azureBlob.StorageAccount
+
+	bucketId, err := azureutils.CreateBucket(ctx, storageAccountName, bucketName, parameters, pr.cloud)
 	if err != nil {
 		return nil, err
 	}
 
 	// Insert the bucket into the namesToBucketMap
 	pr.bucketsLock.RLock()
-	pr.nameToBucketMap[bucketName] = &bucket{
+	pr.nameToBucketMap[bucketName] = &bucketDetails{
 		bucketId:   bucketId,
 		parameters: parameters,
 	}
@@ -116,7 +132,7 @@ func (pr *provisioner) ProvisionerDeleteBucket(
 	req *spec.ProvisionerDeleteBucketRequest) (*spec.ProvisionerDeleteBucketResponse, error) {
 	bucketId := req.GetBucketId()
 	klog.Infof("ProvisionerDeleteBucket :: Bucket id :: %s", bucketId)
-	err := azureutils.DeleteContainer(ctx, bucketId, azureutils.AccessKey)
+	err := azureutils.DeleteBucket(ctx, bucketId, pr.cloud)
 
 	if err != nil {
 		return nil, err
