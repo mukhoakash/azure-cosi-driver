@@ -8,5 +8,5 @@ isDefaultBucketClass: true
 allowedNamespaces:
 - default
 protocol:
-  azure:
+  azureBlob:
     storageAccount: cositest
