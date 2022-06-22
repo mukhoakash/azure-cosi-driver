@@ -26,6 +26,3 @@ release-tools/build.make:
 	ln -s release-tools/travis.yml travis.yml
 
 include release-tools/build.make
-
-REGISTRY_NAME=quay.io/containerobjectstorage
-IMAGE_TAGS=canary

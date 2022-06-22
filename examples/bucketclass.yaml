@@ -1,0 +1,12 @@
+kind: BucketClass
+apiVersion: objectstorage.k8s.io/v1alpha1
+metadata:
+  name: example-bc
+deletionPolicy: delete
+provisioner: blob.cosi.azure.com
+isDefaultBucketClass: true
+allowedNamespaces:
+- default
+protocol:
+  azure:
+    storageAccount: cositest
